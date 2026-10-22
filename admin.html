@@ -1,0 +1,2080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>AI Explorer - Workshop Admin Console</title>
+
+  <!-- Google Fonts: Bricolage Grotesque & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+  <!-- Firebase SDK (Compat mode for static browser client) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    /* ============================================================
+       THEME VARIABLES & RESET
+       Identical aesthetic to student AI Explorer platform
+       ============================================================ */
+    :root {
+      --font-heading: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif;
+      --font-body: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      --bg-page: #EBF2F7;
+      --bg-surface: #FFFFFF;
+      --bg-surface-alt: #F4F8FB;
+      --bg-surface-subtle: #DEE9F2;
+      
+      --text-main: #0B192C;
+      --text-muted: #475569;
+      --text-subtle: #64748B;
+      
+      --accent-teal: #0D9488;
+      --accent-teal-hover: #0F766E;
+      --accent-teal-light: #CCFBF1;
+      --accent-teal-text: #115E59;
+      
+      --accent-yellow: #FACC15;
+      --accent-yellow-dark: #CA8A04;
+      --accent-yellow-light: #FEF08A;
+      
+      --border-card: #CBDCE9;
+      --border-subtle: #E2ECF3;
+
+      --status-red-bg: #FEF2F2;
+      --status-red-border: #EF4444;
+      --status-red-text: #991B1B;
+
+      --status-green-bg: #F0FDF4;
+      --status-green-border: #22C55E;
+      --status-green-text: #166534;
+
+      --shadow-sm: 0 1px 3px rgba(11, 25, 44, 0.06);
+      --shadow-md: 0 4px 12px rgba(11, 25, 44, 0.08);
+      --shadow-lg: 0 10px 25px -5px rgba(11, 25, 44, 0.14);
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 18px;
+    }
+
+    [data-theme="dark"] {
+      --bg-page: #0B131E;
+      --bg-surface: #142132;
+      --bg-surface-alt: #1C2D42;
+      --bg-surface-subtle: #243852;
+      
+      --text-main: #F1F5F9;
+      --text-muted: #94A3B8;
+      --text-subtle: #CBD5E1;
+      
+      --accent-teal: #14B8A6;
+      --accent-teal-hover: #2DD4BF;
+      --accent-teal-light: #134E4A;
+      --accent-teal-text: #5EEAD4;
+      
+      --accent-yellow: #FACC15;
+      --accent-yellow-dark: #EAB308;
+      --accent-yellow-light: #713F12;
+      
+      --border-card: #273A50;
+      --border-subtle: #1E2D40;
+
+      --status-red-bg: #2A1719;
+      --status-red-border: #F87171;
+      --status-red-text: #FCA5A5;
+
+      --status-green-bg: #14281E;
+      --status-green-border: #4ADE80;
+      --status-green-text: #86EFAC;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 1.25rem;
+    }
+
+    /* ============================================================
+       TOP HEADER & BRAND
+       ============================================================ */
+    .admin-header {
+      background-color: var(--bg-surface);
+      border-bottom: 1px solid var(--border-card);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .admin-header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      gap: 1rem;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, var(--accent-teal), #0F766E);
+      color: #FFFFFF;
+      font-family: var(--font-heading);
+      font-weight: 800;
+      font-size: 1.1rem;
+      padding: 0.35rem 0.65rem;
+      border-radius: var(--radius-sm);
+      letter-spacing: -0.02em;
+    }
+
+    .brand-title-group h1 {
+      font-family: var(--font-heading);
+      font-size: 1.1rem;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .brand-title-group p {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: 1px solid var(--border-card);
+      background: var(--bg-surface-alt);
+    }
+    .status-pill.online {
+      background: var(--status-green-bg);
+      border-color: var(--status-green-border);
+      color: var(--status-green-text);
+    }
+    .status-pill.demo {
+      background: var(--accent-yellow-light);
+      border-color: var(--accent-yellow-dark);
+      color: #854D0E;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.5rem 0.9rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+      font-family: var(--font-body);
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-primary {
+      background: var(--accent-teal);
+      color: #FFFFFF;
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-teal-hover);
+    }
+    .btn-outline {
+      background: var(--bg-surface);
+      border-color: var(--border-card);
+      color: var(--text-main);
+    }
+    .btn-outline:hover:not(:disabled) {
+      background: var(--bg-surface-alt);
+      border-color: var(--accent-teal);
+    }
+    .btn-danger-outline {
+      background: var(--bg-surface);
+      border-color: var(--status-red-border);
+      color: var(--status-red-text);
+    }
+    .btn-danger-outline:hover:not(:disabled) {
+      background: var(--status-red-bg);
+    }
+    .btn-sm {
+      padding: 0.3rem 0.6rem;
+      font-size: 0.8rem;
+    }
+
+    /* ============================================================
+       LOGIN SCREEN VIEW
+       ============================================================ */
+    .login-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100vh - 64px);
+      padding: 2rem 1rem;
+    }
+
+    .login-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 440px;
+      padding: 2.25rem 2rem;
+      text-align: center;
+    }
+
+    .login-icon {
+      font-size: 2.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .login-title {
+      font-family: var(--font-heading);
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 0.4rem;
+    }
+
+    .login-desc {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 1.75rem;
+    }
+
+    .form-group {
+      text-align: left;
+      margin-bottom: 1.1rem;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 0.35rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      font-size: 0.95rem;
+      border: 1.5px solid var(--border-card);
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface-alt);
+      color: var(--text-main);
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+    .form-input:focus {
+      border-color: var(--accent-teal);
+      background: var(--bg-surface);
+    }
+
+    .login-error {
+      background: var(--status-red-bg);
+      border: 1px solid var(--status-red-border);
+      color: var(--status-red-text);
+      font-size: 0.85rem;
+      padding: 0.6rem 0.85rem;
+      border-radius: var(--radius-sm);
+      margin-bottom: 1rem;
+      text-align: left;
+      display: none;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 1.5rem 0;
+      color: var(--text-subtle);
+      font-size: 0.8rem;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border-card);
+    }
+    .divider span {
+      padding: 0 0.75rem;
+    }
+
+    .setup-tip {
+      margin-top: 1.5rem;
+      padding: 0.85rem;
+      background: var(--bg-surface-alt);
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-align: left;
+    }
+
+    /* ============================================================
+       ADMIN DASHBOARD MAIN VIEW
+       ============================================================ */
+    #adminDashboard {
+      display: none;
+      padding: 1.75rem 0 3rem 0;
+    }
+
+    /* KPI Metric Cards Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.75rem;
+    }
+
+    .metric-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-md);
+      padding: 1.25rem 1.15rem;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .metric-content h3 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+
+    .metric-num {
+      font-family: var(--font-heading);
+      font-size: 1.85rem;
+      font-weight: 800;
+      color: var(--text-main);
+      line-height: 1.1;
+    }
+
+    .metric-sub {
+      font-size: 0.78rem;
+      color: var(--text-subtle);
+      margin-top: 0.35rem;
+    }
+
+    .metric-icon-wrap {
+      font-size: 1.8rem;
+      opacity: 0.9;
+    }
+
+    /* Dual Column Analytics Section */
+    .analytics-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    @media (max-width: 900px) {
+      .analytics-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-panel-header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border-card);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-surface-alt);
+    }
+
+    .card-panel-header h2 {
+      font-family: var(--font-heading);
+      font-size: 1.05rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .card-panel-body {
+      padding: 1.25rem;
+      flex: 1;
+    }
+
+    /* Pure CSS Horizontal Bar Chart for Career Domains */
+    .chart-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .chart-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .chart-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    .chart-label-left {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--text-main);
+    }
+
+    .chart-bar-bg {
+      height: 10px;
+      background: var(--bg-surface-subtle);
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+
+    .chart-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-teal), #0F766E);
+      border-radius: 9999px;
+      transition: width 0.5s ease;
+      min-width: 2px;
+    }
+
+    /* Leaderboard Table */
+    .leaderboard-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .leaderboard-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.6rem 0.85rem;
+      background: var(--bg-surface-alt);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      font-size: 0.88rem;
+    }
+
+    .lb-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .lb-rank {
+      font-family: var(--font-heading);
+      font-weight: 800;
+      font-size: 0.95rem;
+      width: 24px;
+      text-align: center;
+      color: var(--text-subtle);
+    }
+
+    .lb-name {
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .lb-school {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .lb-score {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--accent-teal-text);
+      background: var(--accent-teal-light);
+      padding: 0.2rem 0.5rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+
+    /* Submissions Management Section & Filters */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      margin-bottom: 1rem;
+      background: var(--bg-surface);
+      padding: 1rem 1.15rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-card);
+    }
+
+    .search-box {
+      flex: 1 1 240px;
+      position: relative;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 0.5rem 0.75rem 0.5rem 2.1rem;
+      font-size: 0.875rem;
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface-alt);
+      color: var(--text-main);
+      font-family: inherit;
+    }
+    .search-box::before {
+      content: '🔍';
+      position: absolute;
+      left: 0.65rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.85rem;
+      opacity: 0.7;
+    }
+
+    .filter-select {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface-alt);
+      color: var(--text-main);
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    /* Results Data Table */
+    .table-container {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      overflow-x: auto;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.875rem;
+    }
+
+    .data-table th {
+      background: var(--bg-surface-alt);
+      padding: 0.75rem 1rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border-card);
+      white-space: nowrap;
+    }
+
+    .data-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border-subtle);
+      vertical-align: middle;
+    }
+
+    .data-table tbody tr:hover {
+      background-color: var(--bg-surface-alt);
+    }
+
+    .student-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      background: var(--bg-surface-subtle);
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .badge-type {
+      display: inline-block;
+      padding: 0.2rem 0.55rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .badge-type.career {
+      background: #E0F2FE;
+      color: #0369A1;
+    }
+    .badge-type.knowledge {
+      background: #F3E8FF;
+      color: #7E22CE;
+    }
+
+    .table-actions {
+      display: flex;
+      gap: 0.4rem;
+      align-items: center;
+    }
+
+    /* Slide-over Drawer Modal */
+    .drawer-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(11, 25, 44, 0.45);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .drawer-content {
+      background: var(--bg-surface);
+      width: 100%;
+      max-width: 600px;
+      height: 100%;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      animation: slideIn 0.25s ease-out;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); }
+      to { transform: translateX(0); }
+    }
+
+    .drawer-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border-card);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-surface-alt);
+    }
+
+    .drawer-header h2 {
+      font-family: var(--font-heading);
+      font-size: 1.2rem;
+      font-weight: 800;
+    }
+
+    .drawer-body {
+      padding: 1.5rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .drawer-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .drawer-section-title {
+      font-family: var(--font-heading);
+      font-size: 0.88rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent-teal-text);
+      margin-bottom: 0.6rem;
+      border-bottom: 1px dashed var(--border-card);
+      padding-bottom: 0.3rem;
+    }
+
+    .kv-grid {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 0.5rem 1rem;
+      font-size: 0.88rem;
+    }
+    .kv-key {
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .kv-val {
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    /* Toast Notification */
+    .toast-box {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: var(--text-main);
+      color: #FFFFFF;
+      padding: 0.75rem 1.25rem;
+      border-radius: var(--radius-md);
+      font-size: 0.88rem;
+      font-weight: 600;
+      box-shadow: var(--shadow-lg);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      gap: 0.6rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============================================================
+       TOP HEADER
+       ============================================================ -->
+  <header class="admin-header">
+    <div class="container">
+      <div class="admin-header-inner">
+        <div class="brand-wrap">
+          <div class="brand-badge">ADMIN</div>
+          <div class="brand-title-group">
+            <h1>AI Explorer Organizer Console</h1>
+            <p>12th-Grade Workshop Analytics & Submissions</p>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <div id="connStatus" class="status-pill">
+            <span class="status-dot"></span>
+            <span id="connStatusText">Connecting...</span>
+          </div>
+
+          <button id="themeToggleBtn" class="btn btn-outline btn-sm" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+            🌓
+          </button>
+
+          <button id="refreshBtn" class="btn btn-outline btn-sm" onclick="refreshData()" title="Reload submissions">
+            🔄 Refresh
+          </button>
+
+          <button id="authActionBtn" class="btn btn-outline btn-sm" onclick="handleAuthAction()" style="display:none;">
+            Sign Out
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       VIEW 1: LOGIN CARD (FIREBASE AUTH OR LOCAL DEMO PREVIEW)
+       ============================================================ -->
+  <main id="loginView" class="login-container">
+    <div class="login-card">
+      <div class="login-icon">🔒</div>
+      <h2 class="login-title">Organizer Sign In</h2>
+      <p class="login-desc">Sign in with your workshop administrator account to access live student quiz submissions and analytics.</p>
+
+      <div id="loginError" class="login-error"></div>
+
+      <form onsubmit="handleLoginSubmit(event)">
+        <div class="form-group">
+          <label class="form-label" for="adminEmail">Organizer Email</label>
+          <input type="email" id="adminEmail" class="form-input" placeholder="teacher@school.edu" required autocomplete="email" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="adminPassword">Password</label>
+          <input type="password" id="adminPassword" class="form-input" placeholder="••••••••" required autocomplete="current-password" />
+        </div>
+
+        <button type="submit" id="btnLoginSubmit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+          Sign In to Live Console →
+        </button>
+      </form>
+
+      <div class="divider">
+        <span>OR</span>
+      </div>
+
+      <button type="button" class="btn btn-outline" style="width: 100%;" onclick="startDemoMode()">
+        Preview in Demo Mode (Local Workshop Data) 🚀
+      </button>
+
+      <div class="setup-tip">
+        <strong>💡 Need to configure Firebase?</strong><br>
+        Check <code>SETUP.md</code> in the project directory for instructions on setting up your free Firebase project, email auth, and Firestore database.
+      </div>
+    </div>
+  </main>
+
+  <!-- ============================================================
+       VIEW 2: MAIN ADMIN DASHBOARD
+       ============================================================ -->
+  <main id="adminDashboard" class="container">
+
+    <!-- KPI Metric Cards -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-content">
+          <h3>Total Submissions</h3>
+          <div class="metric-num" id="statTotalSubmissions">0</div>
+          <div class="metric-sub" id="statSubBreakdown">0 Career · 0 Knowledge</div>
+        </div>
+        <div class="metric-icon-wrap">📋</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-content">
+          <h3>Active Students</h3>
+          <div class="metric-num" id="statUniqueStudents">0</div>
+          <div class="metric-sub">Distinct participant IDs</div>
+        </div>
+        <div class="metric-icon-wrap">🧑‍🎓</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-content">
+          <h3>Avg Knowledge Score</h3>
+          <div class="metric-num" id="statAvgScore">0 / 15</div>
+          <div class="metric-sub" id="statAvgPct">0% class average</div>
+        </div>
+        <div class="metric-icon-wrap">🧠</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-content">
+          <h3>Top Career Match</h3>
+          <div class="metric-num" id="statTopDomain" style="font-size: 1.35rem; margin-top: 0.2rem;">-</div>
+          <div class="metric-sub" id="statTopDomainSub">Awaiting submissions</div>
+        </div>
+        <div class="metric-icon-wrap">🎯</div>
+      </div>
+    </div>
+
+    <!-- Analytics Row: Leaderboard + Career Domain Distribution Chart -->
+    <div class="analytics-row">
+      
+      <!-- Top 10 Knowledge Leaderboard -->
+      <div class="card-panel">
+        <div class="card-panel-header">
+          <h2><span>🏆</span> Knowledge Quiz Leaderboard (Top 10)</h2>
+          <span style="font-size: 0.8rem; color: var(--text-muted);" id="lbCount">0 completed</span>
+        </div>
+        <div class="card-panel-body">
+          <div id="leaderboardContainer" class="leaderboard-list">
+            <div style="text-align: center; color: var(--text-muted); padding: 2rem;">
+              No quiz submissions yet.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pure CSS Career Domain Distribution Chart -->
+      <div class="card-panel">
+        <div class="card-panel-header">
+          <h2><span>📊</span> Career Domain Distribution</h2>
+          <span style="font-size: 0.8rem; color: var(--text-muted);">From Career Profile Quizzes</span>
+        </div>
+        <div class="card-panel-body">
+          <div id="careerChartContainer" class="chart-list">
+            <div style="text-align: center; color: var(--text-muted); padding: 2rem;">
+              No career profile submissions yet.
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Submissions Table Section -->
+    <div class="card-panel" style="margin-top: 1.5rem;">
+      <div class="card-panel-header">
+        <h2><span>📑</span> Student Submissions Log</h2>
+        <button class="btn btn-primary btn-sm" onclick="exportCSV()">
+          <span>📥</span> Export CSV
+        </button>
+      </div>
+
+      <!-- Filters & Search Toolbar -->
+      <div class="filter-bar" style="border: none; border-bottom: 1px solid var(--border-card); border-radius: 0; margin-bottom: 0;">
+        <div class="search-box">
+          <input type="text" id="filterSearch" placeholder="Search by name, ID, school..." oninput="applyFilters()" />
+        </div>
+
+        <select id="filterClass" class="filter-select" onchange="applyFilters()">
+          <option value="all">All Classes</option>
+          <option value="12th">Class 12th</option>
+          <option value="Passed 12th">Passed 12th</option>
+          <option value="Other">Other</option>
+        </select>
+
+        <select id="filterStream" class="filter-select" onchange="applyFilters()">
+          <option value="all">All Streams</option>
+          <option value="PCM">PCM</option>
+          <option value="PCB">PCB</option>
+          <option value="PCMB">PCMB</option>
+          <option value="Commerce with Maths">Commerce w/ Maths</option>
+          <option value="Commerce without Maths">Commerce w/o Maths</option>
+          <option value="Arts">Arts</option>
+          <option value="Vocational">Vocational</option>
+          <option value="Other">Other</option>
+        </select>
+
+        <select id="filterType" class="filter-select" onchange="applyFilters()">
+          <option value="all">All Types</option>
+          <option value="career_profile">Career Profile</option>
+          <option value="knowledge_quiz">Knowledge Quiz</option>
+        </select>
+
+        <button class="btn btn-outline btn-sm" onclick="resetFilters()">
+          Clear Filters
+        </button>
+      </div>
+
+      <!-- Submissions Table -->
+      <div class="table-container" style="border: none; border-radius: 0;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date / Time</th>
+              <th>Student ID</th>
+              <th>Student Name</th>
+              <th>School & Class</th>
+              <th>Type</th>
+              <th>Key Result</th>
+              <th style="text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="submissionsTableBody">
+            <tr>
+              <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                Loading submissions...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ============================================================
+       DRAWER / MODAL: DETAILED STUDENT SUBMISSION VIEW
+       ============================================================ -->
+  <div id="detailDrawer" class="drawer-overlay" onclick="closeDrawer(event)">
+    <div class="drawer-content" onclick="event.stopPropagation()">
+      <div class="drawer-header">
+        <h2 id="drawerTitle">Submission Details</h2>
+        <button class="btn btn-outline btn-sm" onclick="closeDrawer()">✕ Close</button>
+      </div>
+      <div class="drawer-body" id="drawerBody">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Alert -->
+  <div id="toastBox" class="toast-box">
+    <span id="toastIcon">ℹ️</span>
+    <span id="toastMsg">Notification message</span>
+  </div>
+
+  <!-- ============================================================
+       ADMIN SCRIPT LOGIC
+       ============================================================ -->
+  <script>
+    /* ============================================================
+       FIREBASE CONFIGURATION
+       Same config block as index.html
+       ============================================================ */
+    const FIREBASE_CONFIG = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    // State Variables
+    let currentUser = null;
+    let isDemoMode = false;
+    let firestoreUnsubscribe = null;
+    let rawSubmissions = [];
+    let filteredSubmissions = [];
+
+    // Pre-seeded demo dataset so organizers can preview all features instantly
+    const SAMPLE_DEMO_DATA = [
+      {
+        id: "demo_sub_1",
+        type: "career_profile",
+        studentId: "EXP-8472",
+        studentName: "Priya Sharma",
+        school: "Kendriya Vidyalaya",
+        district: "Bengaluru",
+        classGrade: "12th",
+        stream: "PCM",
+        favSubjects: ["Computer Science", "Mathematics", "Physics"],
+        mathComfort: 4,
+        codingComfort: 4,
+        hobbies: ["building gadgets", "gaming", "solving puzzles"],
+        careerPriorities: ["good salary", "creativity"],
+        workStyle: "mix",
+        environmentPref: "desk and computer work",
+        planAfter12th: "Engineering degree",
+        tenYearGoal: "Lead a high-scale autonomous robotics or AI infrastructure company in India.",
+        domainScores: { ai: 14, dev: 12, hw: 9, sec: 8, cloud: 7, data: 6, design: 5, xr: 4 },
+        topMatches: [
+          {
+            id: "ai",
+            title: "Artificial Intelligence & ML Engineer",
+            emoji: "🧠",
+            score: 14,
+            matchPct: 95,
+            whyFits: "High math and coding comfort combined with a passion for software algorithms and data logic.",
+            roadmapTab: "domains"
+          },
+          {
+            id: "dev",
+            title: "Full-Stack Software Engineer",
+            emoji: "💻",
+            score: 12,
+            matchPct: 88,
+            whyFits: "Strong programming aptitude and preference for building scalable digital tools.",
+            roadmapTab: "domains"
+          },
+          {
+            id: "hw",
+            title: "Robotics & Hardware Engineer",
+            emoji: "🤖",
+            score: 9,
+            matchPct: 76,
+            whyFits: "Enjoys tinkering with physical gadgets and sensor electronics.",
+            roadmapTab: "resistant"
+          }
+        ],
+        profileAnalysis: {
+          strengths: "Mathematics, Software Architecture, Algorithmic Thinking",
+          skillsToBuild: "Explore cloud deployment pipelines and PyTorch machine learning models.",
+          backupPath: "Cloud Infrastructure & DevOps Engineer"
+        },
+        createdAt: new Date(Date.now() - 1000 * 60 * 35).toISOString()
+      },
+      {
+        id: "demo_sub_2",
+        type: "knowledge_quiz",
+        studentId: "EXP-8472",
+        studentName: "Priya Sharma",
+        school: "Kendriya Vidyalaya",
+        classGrade: "12th",
+        score: 14,
+        totalQuestions: 15,
+        percentage: 93,
+        timeSeconds: 184,
+        timeFormatted: "03:04",
+        badge: "AI Champion 🏆",
+        wrongAnswersCount: 1,
+        answersSummary: [
+          { question: "5-part recipe for crafting strong AI prompts?", correct: true, yourAnswer: "Role, Task, Context, Format, Limits" },
+          { question: "Tool that lets you upload PDFs and chat with them?", correct: true, yourAnswer: "NotebookLM" },
+          { question: "Tool that turns text prompts into UI code?", correct: true, yourAnswer: "v0 by Vercel" },
+          { question: "Why is VLSI & Semiconductor design AI-resistant?", correct: false, yourAnswer: "Chips cannot use electricity", correctAnswer: "Chip fabrication costs millions to tape out, requiring flawless human verification." }
+        ],
+        createdAt: new Date(Date.now() - 1000 * 60 * 25).toISOString()
+      },
+      {
+        id: "demo_sub_3",
+        type: "career_profile",
+        studentId: "EXP-3190",
+        studentName: "Arjun Verma",
+        school: "Delhi Public School",
+        district: "New Delhi",
+        classGrade: "12th",
+        stream: "PCB",
+        favSubjects: ["Biology", "Chemistry"],
+        mathComfort: 3,
+        codingComfort: 1,
+        hobbies: ["helping people", "drawing/design"],
+        careerPriorities: ["helping society", "job stability"],
+        workStyle: "mix",
+        environmentPref: "field and hands-on work",
+        planAfter12th: "Engineering degree",
+        tenYearGoal: "Develop smart biosensors to make cancer diagnosis affordable in rural clinics.",
+        domainScores: { bio: 15, design: 8, data: 6, ai: 5, dev: 3 },
+        topMatches: [
+          {
+            id: "biotech",
+            title: "Biotechnology & Biomedical Engineer",
+            emoji: "🧬",
+            score: 15,
+            matchPct: 96,
+            whyFits: "PCB background with a passion for healthcare innovation and physical laboratory research.",
+            roadmapTab: "domains"
+          },
+          {
+            id: "design",
+            title: "Healthcare UX & Medical Device Designer",
+            emoji: "🎨",
+            score: 8,
+            matchPct: 78,
+            whyFits: "Interest in human empathy and visual clarity for patients and doctors.",
+            roadmapTab: "resistant"
+          },
+          {
+            id: "data",
+            title: "Clinical Data Analyst",
+            emoji: "📊",
+            score: 6,
+            matchPct: 65,
+            whyFits: "Analyzing clinical trial outcomes and hospital diagnostic records.",
+            roadmapTab: "resistant"
+          }
+        ],
+        profileAnalysis: {
+          strengths: "Biology, Medical Empathy, Clinical Problem Solving",
+          skillsToBuild: "Begin with Python for Biologists to understand DNA sequence data.",
+          backupPath: "Environmental & Sustainable Technologies"
+        },
+        createdAt: new Date(Date.now() - 1000 * 60 * 55).toISOString()
+      },
+      {
+        id: "demo_sub_4",
+        type: "knowledge_quiz",
+        studentId: "EXP-3190",
+        studentName: "Arjun Verma",
+        school: "Delhi Public School",
+        classGrade: "12th",
+        score: 12,
+        totalQuestions: 15,
+        percentage: 80,
+        timeSeconds: 245,
+        timeFormatted: "04:05",
+        badge: "AI Champion 🏆",
+        wrongAnswersCount: 3,
+        createdAt: new Date(Date.now() - 1000 * 60 * 40).toISOString()
+      },
+      {
+        id: "demo_sub_5",
+        type: "career_profile",
+        studentId: "EXP-6124",
+        studentName: "Kavya Menon",
+        school: "SSMIET Model School",
+        district: "Dindigul",
+        classGrade: "12th",
+        stream: "PCM",
+        favSubjects: ["Physics", "Mathematics"],
+        mathComfort: 5,
+        codingComfort: 2,
+        hobbies: ["building gadgets", "gaming"],
+        careerPriorities: ["job stability", "working abroad"],
+        workStyle: "in a team",
+        environmentPref: "mix",
+        planAfter12th: "Engineering degree",
+        tenYearGoal: "Work at ISRO or Airbus on satellite control navigation systems.",
+        domainScores: { aero: 14, hw: 13, sec: 8, cloud: 6 },
+        topMatches: [
+          {
+            id: "aero",
+            title: "Aerospace & Avionics Engineer",
+            emoji: "🚀",
+            score: 14,
+            matchPct: 94,
+            whyFits: "High mathematics comfort and physics aptitude geared toward flight dynamics and propulsion.",
+            roadmapTab: "domains"
+          },
+          {
+            id: "hw",
+            title: "Robotics & Embedded Systems",
+            emoji: "🔌",
+            score: 13,
+            matchPct: 90,
+            whyFits: "Passion for hands-on circuits, sensor telemetry, and physical control units.",
+            roadmapTab: "resistant"
+          },
+          {
+            id: "sec",
+            title: "Cybersecurity & Critical Infrastructure Defender",
+            emoji: "🛡️",
+            score: 8,
+            matchPct: 70,
+            whyFits: "Protecting critical satellite and defense communication grids.",
+            roadmapTab: "resistant"
+          }
+        ],
+        profileAnalysis: {
+          strengths: "Physics, Mathematical Modeling, Hardware Troubleshooting",
+          skillsToBuild: "Learn C programming for microcontrollers and Arduino circuits.",
+          backupPath: "Electrical & Electronics Engineering (EEE)"
+        },
+        createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString()
+      },
+      {
+        id: "demo_sub_6",
+        type: "knowledge_quiz",
+        studentId: "EXP-6124",
+        studentName: "Kavya Menon",
+        school: "SSMIET Model School",
+        classGrade: "12th",
+        score: 15,
+        totalQuestions: 15,
+        percentage: 100,
+        timeSeconds: 160,
+        timeFormatted: "02:40",
+        badge: "AI Champion 🏆",
+        wrongAnswersCount: 0,
+        createdAt: new Date(Date.now() - 1000 * 60 * 10).toISOString()
+      }
+    ];
+
+    // Helper: Escape HTML to prevent XSS
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Helper: Show notification toast
+    function showToast(msg, icon = "ℹ️") {
+      const box = document.getElementById("toastBox");
+      document.getElementById("toastIcon").innerText = icon;
+      document.getElementById("toastMsg").innerText = msg;
+      box.style.display = "flex";
+      setTimeout(() => {
+        box.style.display = "none";
+      }, 3500);
+    }
+
+    // Helper: Theme toggle
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute("data-theme") || "light";
+      const next = current === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      localStorage.setItem("ai_explorer_admin_theme", next);
+    }
+
+    // Initialize Theme
+    (function initTheme() {
+      const saved = localStorage.getItem("ai_explorer_admin_theme");
+      if (saved) {
+        document.documentElement.setAttribute("data-theme", saved);
+      } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    })();
+
+    /* ============================================================
+       INITIALIZATION & FIREBASE AUTHENTICATION FLOW
+       ============================================================ */
+    window.addEventListener("DOMContentLoaded", () => {
+      initFirebase();
+    });
+
+    function initFirebase() {
+      const connPill = document.getElementById("connStatus");
+      const connText = document.getElementById("connStatusText");
+
+      try {
+        if (typeof firebase !== "undefined" && FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.startsWith("YOUR_")) {
+          if (!firebase.apps.length) {
+            firebase.initializeApp(FIREBASE_CONFIG);
+          }
+          // Listen to Auth state changes
+          firebase.auth().onAuthStateChanged(user => {
+            if (user) {
+              currentUser = user;
+              isDemoMode = false;
+              connPill.className = "status-pill online";
+              connText.innerText = "Live Firestore Connected";
+              document.getElementById("authActionBtn").style.display = "inline-flex";
+              document.getElementById("authActionBtn").innerText = "Sign Out";
+              showDashboard();
+              listenToLiveFirestore();
+            } else if (!isDemoMode) {
+              showLoginView();
+              connPill.className = "status-pill";
+              connText.innerText = "Awaiting Login";
+              document.getElementById("authActionBtn").style.display = "none";
+            }
+          });
+        } else {
+          // Firebase not yet configured
+          connPill.className = "status-pill demo";
+          connText.innerText = "Config Pending (Demo Ready)";
+        }
+      } catch (err) {
+        console.warn("Firebase initialization warning:", err);
+        connPill.className = "status-pill demo";
+        connText.innerText = "Offline Mode";
+      }
+    }
+
+    async function handleLoginSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById("adminEmail").value.trim();
+      const password = document.getElementById("adminPassword").value;
+      const errBox = document.getElementById("loginError");
+      const btn = document.getElementById("btnLoginSubmit");
+
+      errBox.style.display = "none";
+      btn.disabled = true;
+      btn.innerText = "Verifying credentials...";
+
+      if (!FIREBASE_CONFIG.apiKey || FIREBASE_CONFIG.apiKey.startsWith("YOUR_")) {
+        errBox.innerText = "Firebase configuration is not set up in admin.html. Please add your Firebase project keys or click 'Preview in Demo Mode' below.";
+        errBox.style.display = "block";
+        btn.disabled = false;
+        btn.innerText = "Sign In to Live Console →";
+        return;
+      }
+
+      try {
+        await firebase.auth().signInWithEmailAndPassword(email, password);
+        showToast("Signed in successfully!", "✅");
+      } catch (err) {
+        console.error("Sign in failed:", err);
+        errBox.innerText = err.message || "Failed to sign in. Please verify your email and password.";
+        errBox.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Sign In to Live Console →";
+      }
+    }
+
+    function startDemoMode() {
+      isDemoMode = true;
+      document.getElementById("connStatus").className = "status-pill demo";
+      document.getElementById("connStatusText").innerText = "Local Demo Mode";
+      document.getElementById("authActionBtn").style.display = "inline-flex";
+      document.getElementById("authActionBtn").innerText = "Exit Demo";
+
+      showDashboard();
+      loadDemoAndOfflineData();
+      showToast("Loaded workshop demo & local records!", "🚀");
+    }
+
+    function handleAuthAction() {
+      if (isDemoMode) {
+        isDemoMode = false;
+        showLoginView();
+        initFirebase();
+      } else if (firebase.auth) {
+        firebase.auth().signOut().then(() => {
+          showLoginView();
+          showToast("Signed out successfully.", "👋");
+        });
+      }
+    }
+
+    function showLoginView() {
+      document.getElementById("loginView").style.display = "flex";
+      document.getElementById("adminDashboard").style.display = "none";
+      if (firestoreUnsubscribe) {
+        firestoreUnsubscribe();
+        firestoreUnsubscribe = null;
+      }
+    }
+
+    function showDashboard() {
+      document.getElementById("loginView").style.display = "none";
+      document.getElementById("adminDashboard").style.display = "block";
+    }
+
+    /* ============================================================
+       DATA LOADING: FIRESTORE LIVE SNAPSHOT & LOCAL STORAGE MERGE
+       ============================================================ */
+    function listenToLiveFirestore() {
+      try {
+        const db = firebase.firestore();
+        if (firestoreUnsubscribe) firestoreUnsubscribe();
+
+        // Subscribe to live results ordered by timestamp descending
+        firestoreUnsubscribe = db.collection("results")
+          .onSnapshot(snapshot => {
+            const list = [];
+            snapshot.forEach(doc => {
+              const data = doc.data();
+              list.push({ id: doc.id, ...data });
+            });
+
+            // Also check for any offline items saved in this browser's localStorage
+            const localQueue = getOfflineLocalData();
+            // Merge unique
+            const idMap = new Set(list.map(x => x.id || (x.studentId + "_" + x.createdAt)));
+            localQueue.forEach(item => {
+              const uniqueKey = item.id || (item.studentId + "_" + item.createdAt);
+              if (!idMap.has(uniqueKey)) {
+                list.push({ ...item, _isLocalOffline: true });
+              }
+            });
+
+            // Sort newest first
+            list.sort((a, b) => {
+              const tA = parseTime(a);
+              const tB = parseTime(b);
+              return tB - tA;
+            });
+
+            rawSubmissions = list;
+            applyFilters();
+          }, error => {
+            console.error("Firestore live listener error:", error);
+            showToast("Firestore access error: " + error.message, "⚠️");
+            loadDemoAndOfflineData();
+          });
+      } catch (e) {
+        console.warn("Unable to start live listener:", e);
+        loadDemoAndOfflineData();
+      }
+    }
+
+    function getOfflineLocalData() {
+      try {
+        const raw = localStorage.getItem("ai_explorer_offline_results");
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function loadDemoAndOfflineData() {
+      const localQueue = getOfflineLocalData();
+      const combined = [...localQueue, ...SAMPLE_DEMO_DATA];
+      
+      // Deduplicate
+      const seen = new Set();
+      const list = [];
+      combined.forEach(item => {
+        const key = item.id || (item.studentId + "_" + item.type + "_" + (item.createdAt || ""));
+        if (!seen.has(key)) {
+          seen.add(key);
+          list.push(item);
+        }
+      });
+
+      list.sort((a, b) => parseTime(b) - parseTime(a));
+      rawSubmissions = list;
+      applyFilters();
+    }
+
+    function parseTime(record) {
+      if (record.timestamp) {
+        if (typeof record.timestamp.toMillis === "function") return record.timestamp.toMillis();
+        if (record.timestamp.seconds) return record.timestamp.seconds * 1000;
+        const d = new Date(record.timestamp);
+        if (!isNaN(d.getTime())) return d.getTime();
+      }
+      if (record.createdAt) {
+        const d = new Date(record.createdAt);
+        if (!isNaN(d.getTime())) return d.getTime();
+      }
+      return 0;
+    }
+
+    function refreshData() {
+      if (isDemoMode) {
+        loadDemoAndOfflineData();
+        showToast("Refreshed local records.", "🔄");
+      } else if (currentUser) {
+        listenToLiveFirestore();
+        showToast("Refreshed live database.", "🔄");
+      } else {
+        showToast("Please sign in or enter Demo Mode.", "ℹ️");
+      }
+    }
+
+    /* ============================================================
+       FILTERING, METRICS & RENDERING
+       ============================================================ */
+    function applyFilters() {
+      const searchTerm = document.getElementById("filterSearch").value.trim().toLowerCase();
+      const filterClass = document.getElementById("filterClass").value;
+      const filterStream = document.getElementById("filterStream").value;
+      const filterType = document.getElementById("filterType").value;
+
+      filteredSubmissions = rawSubmissions.filter(item => {
+        // Search term matches studentName, studentId, school, or district
+        if (searchTerm) {
+          const name = (item.studentName || "").toLowerCase();
+          const sid = (item.studentId || "").toLowerCase();
+          const school = (item.school || "").toLowerCase();
+          const dist = (item.district || "").toLowerCase();
+          if (!name.includes(searchTerm) && !sid.includes(searchTerm) && !school.includes(searchTerm) && !dist.includes(searchTerm)) {
+            return false;
+          }
+        }
+
+        // Class filter
+        if (filterClass !== "all" && item.classGrade && item.classGrade !== filterClass) {
+          return false;
+        }
+
+        // Stream filter
+        if (filterStream !== "all" && item.stream && item.stream !== filterStream) {
+          return false;
+        }
+
+        // Type filter
+        if (filterType !== "all" && item.type !== filterType) {
+          return false;
+        }
+
+        return true;
+      });
+
+      renderMetrics();
+      renderLeaderboard();
+      renderCareerDomainChart();
+      renderSubmissionsTable();
+    }
+
+    function resetFilters() {
+      document.getElementById("filterSearch").value = "";
+      document.getElementById("filterClass").value = "all";
+      document.getElementById("filterStream").value = "all";
+      document.getElementById("filterType").value = "all";
+      applyFilters();
+    }
+
+    function renderMetrics() {
+      // 1. Total Submissions & Breakdown
+      const total = filteredSubmissions.length;
+      document.getElementById("statTotalSubmissions").innerText = total;
+
+      const careerCount = filteredSubmissions.filter(x => x.type === "career_profile").length;
+      const quizCount = filteredSubmissions.filter(x => x.type === "knowledge_quiz").length;
+      document.getElementById("statSubBreakdown").innerText = `${careerCount} Career · ${quizCount} Knowledge`;
+
+      // 2. Unique Students
+      const studentIds = new Set(filteredSubmissions.map(x => x.studentId).filter(Boolean));
+      document.getElementById("statUniqueStudents").innerText = studentIds.size;
+
+      // 3. Avg Knowledge Score
+      const quizzes = filteredSubmissions.filter(x => x.type === "knowledge_quiz" && typeof x.score === "number");
+      if (quizzes.length > 0) {
+        const sumScore = quizzes.reduce((acc, cur) => acc + cur.score, 0);
+        const avg = (sumScore / quizzes.length).toFixed(1);
+        const avgPct = Math.round((sumScore / (quizzes.length * 15)) * 100);
+        document.getElementById("statAvgScore").innerText = `${avg} / 15`;
+        document.getElementById("statAvgPct").innerText = `${avgPct}% class average (${quizzes.length} tests)`;
+      } else {
+        document.getElementById("statAvgScore").innerText = "0 / 15";
+        document.getElementById("statAvgPct").innerText = "No quizzes submitted yet";
+      }
+
+      // 4. Top Career Domain
+      const domainTally = {};
+      filteredSubmissions.forEach(item => {
+        if (item.type === "career_profile" && Array.isArray(item.topMatches) && item.topMatches.length > 0) {
+          const topMatch = item.topMatches[0];
+          const title = topMatch.title || topMatch.id;
+          domainTally[title] = (domainTally[title] || 0) + 1;
+        }
+      });
+
+      const sortedDomains = Object.entries(domainTally).sort((a, b) => b[1] - a[1]);
+      if (sortedDomains.length > 0) {
+        const [topTitle, count] = sortedDomains[0];
+        const pct = Math.round((count / careerCount) * 100);
+        document.getElementById("statTopDomain").innerText = topTitle;
+        document.getElementById("statTopDomainSub").innerText = `${count} matches (${pct}% of career profiles)`;
+      } else {
+        document.getElementById("statTopDomain").innerText = "Awaiting profiles";
+        document.getElementById("statTopDomainSub").innerText = "No career submissions yet";
+      }
+    }
+
+    function renderLeaderboard() {
+      const container = document.getElementById("leaderboardContainer");
+      const quizzes = rawSubmissions.filter(x => x.type === "knowledge_quiz" && typeof x.score === "number");
+      
+      document.getElementById("lbCount").innerText = `${quizzes.length} completed`;
+
+      if (quizzes.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; color: var(--text-muted); padding: 2rem;">
+            No quiz submissions yet.
+          </div>
+        `;
+        return;
+      }
+
+      // Sort by score desc, then timeSeconds asc
+      const sorted = [...quizzes].sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return (a.timeSeconds || 9999) - (b.timeSeconds || 9999);
+      }).slice(0, 10);
+
+      const rankMedals = ["🥇", "🥈", "🥉"];
+
+      container.innerHTML = sorted.map((q, idx) => {
+        const medal = idx < 3 ? rankMedals[idx] : `#${idx + 1}`;
+        const timeStr = q.timeFormatted || (q.timeSeconds ? `${Math.floor(q.timeSeconds/60)}m ${q.timeSeconds%60}s` : "");
+        return `
+          <div class="leaderboard-item">
+            <div class="lb-left">
+              <span class="lb-rank">${medal}</span>
+              <div>
+                <div class="lb-name">
+                  ${escapeHtml(q.studentName || "Explorer")} 
+                  <span class="student-badge">${escapeHtml(q.studentId || "")}</span>
+                </div>
+                <div class="lb-school">${escapeHtml(q.school || "12th Student")} · ${timeStr}</div>
+              </div>
+            </div>
+            <div class="lb-score">
+              ${q.score}/15 (${q.percentage || Math.round((q.score/15)*100)}%)
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderCareerDomainChart() {
+      const container = document.getElementById("careerChartContainer");
+      const careerProfiles = rawSubmissions.filter(x => x.type === "career_profile");
+
+      if (careerProfiles.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; color: var(--text-muted); padding: 2rem;">
+            No career profile submissions yet.
+          </div>
+        `;
+        return;
+      }
+
+      // Calculate frequency of top matches across all students
+      const domainStats = {};
+      careerProfiles.forEach(item => {
+        if (Array.isArray(item.topMatches)) {
+          item.topMatches.forEach((m, idx) => {
+            // Weight: Top match = 3 points, 2nd = 2 points, 3rd = 1 point
+            const weight = idx === 0 ? 3 : (idx === 1 ? 2 : 1);
+            const key = m.title || m.id;
+            const emoji = m.emoji || "🎯";
+            if (!domainStats[key]) {
+              domainStats[key] = { name: key, emoji: emoji, count: 0, weightedScore: 0 };
+            }
+            if (idx === 0) domainStats[key].count += 1;
+            domainStats[key].weightedScore += weight;
+          });
+        }
+      });
+
+      const list = Object.values(domainStats).sort((a, b) => b.weightedScore - a.weightedScore);
+      const maxCount = Math.max(...list.map(x => x.count), 1);
+
+      container.innerHTML = list.map(d => {
+        const pct = Math.round((d.count / careerProfiles.length) * 100);
+        const barWidth = Math.max(Math.round((d.count / maxCount) * 100), 4);
+        return `
+          <div class="chart-item">
+            <div class="chart-label-row">
+              <span class="chart-label-left">
+                <span>${escapeHtml(d.emoji)}</span>
+                <span>${escapeHtml(d.name)}</span>
+              </span>
+              <span style="color: var(--text-muted); font-size: 0.8rem;">
+                <strong>${d.count}</strong> students (#1 match) · ${pct}%
+              </span>
+            </div>
+            <div class="chart-bar-bg">
+              <div class="chart-bar-fill" style="width: ${barWidth}%;"></div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderSubmissionsTable() {
+      const tbody = document.getElementById("submissionsTableBody");
+
+      if (filteredSubmissions.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+              No matching submissions found.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filteredSubmissions.map(item => {
+        const timeMillis = parseTime(item);
+        const timeFormatted = timeMillis ? new Date(timeMillis).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : "Just now";
+        const isCareer = item.type === "career_profile";
+
+        let keyResultHtml = "";
+        if (isCareer) {
+          const topMatch = (Array.isArray(item.topMatches) && item.topMatches[0]) ? item.topMatches[0] : null;
+          keyResultHtml = topMatch ? `<strong>${escapeHtml(topMatch.emoji)} ${escapeHtml(topMatch.title)}</strong> (${topMatch.matchPct}%)` : "Profile completed";
+        } else {
+          keyResultHtml = `<strong>${item.score || 0}/15</strong> (${item.percentage || 0}%) · ${escapeHtml(item.badge || "")}`;
+        }
+
+        const typeBadge = isCareer 
+          ? `<span class="badge-type career">Career Profile</span>`
+          : `<span class="badge-type knowledge">Knowledge Quiz</span>`;
+
+        const schoolClass = `${escapeHtml(item.school || "School N/A")} (${escapeHtml(item.classGrade || "12th")}${item.stream ? ' · ' + escapeHtml(item.stream) : ''})`;
+
+        return `
+          <tr>
+            <td style="color: var(--text-muted); white-space: nowrap;">${timeFormatted}</td>
+            <td><span class="student-badge">${escapeHtml(item.studentId || "N/A")}</span></td>
+            <td style="font-weight: 700;">${escapeHtml(item.studentName || "Anonymous")}</td>
+            <td style="color: var(--text-muted);">${schoolClass}</td>
+            <td>${typeBadge}</td>
+            <td>${keyResultHtml}</td>
+            <td style="text-align: right;">
+              <div class="table-actions" style="justify-content: flex-end;">
+                <button class="btn btn-outline btn-sm" onclick="openDetails('${item.id || ''}')" title="View complete answers">
+                  👁️ View
+                </button>
+                <button class="btn btn-danger-outline btn-sm" onclick="deleteSubmission('${item.id || ''}')" title="Delete record">
+                  🗑️
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    /* ============================================================
+       DETAIL SLIDE-OVER DRAWER
+       ============================================================ */
+    function openDetails(subId) {
+      const item = rawSubmissions.find(x => x.id === subId);
+      if (!item) {
+        showToast("Record not found", "⚠️");
+        return;
+      }
+
+      const drawer = document.getElementById("detailDrawer");
+      const title = document.getElementById("drawerTitle");
+      const body = document.getElementById("drawerBody");
+
+      const isCareer = item.type === "career_profile";
+      title.innerText = isCareer ? "Career Profile Breakdown" : "Knowledge Quiz Breakdown";
+
+      let contentHtml = `
+        <div class="drawer-section">
+          <div class="drawer-section-title">Participant Information</div>
+          <div class="kv-grid">
+            <span class="kv-key">Student Name:</span>
+            <span class="kv-val"><strong>${escapeHtml(item.studentName || "Explorer")}</strong></span>
+
+            <span class="kv-key">Explorer ID:</span>
+            <span class="kv-val"><span class="student-badge">${escapeHtml(item.studentId || "N/A")}</span></span>
+
+            <span class="kv-key">School:</span>
+            <span class="kv-val">${escapeHtml(item.school || "Not specified")}</span>
+
+            <span class="kv-key">District / City:</span>
+            <span class="kv-val">${escapeHtml(item.district || "Not specified")}</span>
+
+            <span class="kv-key">Class & Stream:</span>
+            <span class="kv-val">${escapeHtml(item.classGrade || "12th")} (${escapeHtml(item.stream || "General")})</span>
+          </div>
+        </div>
+      `;
+
+      if (isCareer) {
+        contentHtml += `
+          <div class="drawer-section">
+            <div class="drawer-section-title">Academic & Comfort Signals</div>
+            <div class="kv-grid">
+              <span class="kv-key">Favourite Subjects:</span>
+              <span class="kv-val">${Array.isArray(item.favSubjects) && item.favSubjects.length ? escapeHtml(item.favSubjects.join(", ")) : "None selected"}</span>
+
+              <span class="kv-key">Maths Comfort:</span>
+              <span class="kv-val"><strong>${item.mathComfort || 3} / 5</strong></span>
+
+              <span class="kv-key">Coding Comfort:</span>
+              <span class="kv-val"><strong>${item.codingComfort || 1} / 5</strong></span>
+
+              <span class="kv-key">Hobbies:</span>
+              <span class="kv-val">${Array.isArray(item.hobbies) && item.hobbies.length ? escapeHtml(item.hobbies.join(", ")) : "None specified"}</span>
+            </div>
+          </div>
+
+          <div class="drawer-section">
+            <div class="drawer-section-title">Goals & Work Style Preferences</div>
+            <div class="kv-grid">
+              <span class="kv-key">Career Priorities:</span>
+              <span class="kv-val">${Array.isArray(item.careerPriorities) ? escapeHtml(item.careerPriorities.join(" & ")) : "Not specified"}</span>
+
+              <span class="kv-key">Work Style:</span>
+              <span class="kv-val">${escapeHtml(item.workStyle || "mix")}</span>
+
+              <span class="kv-key">Environment:</span>
+              <span class="kv-val">${escapeHtml(item.environmentPref || "mix")}</span>
+
+              <span class="kv-key">Plan After 12th:</span>
+              <span class="kv-val">${escapeHtml(item.planAfter12th || "Not sure yet")}</span>
+
+              <span class="kv-key">10-Year Vision:</span>
+              <span class="kv-val"><em>"${escapeHtml(item.tenYearGoal || "No comment provided")}"</em></span>
+            </div>
+          </div>
+
+          <div class="drawer-section">
+            <div class="drawer-section-title">Top 3 Career Matches</div>
+            ${Array.isArray(item.topMatches) ? item.topMatches.map((m, idx) => `
+              <div style="background: var(--bg-surface-alt); border: 1px solid var(--border-card); border-radius: var(--radius-sm); padding: 0.85rem; margin-bottom: 0.65rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                  <strong style="font-size: 0.95rem;">#${idx + 1} ${escapeHtml(m.emoji)} ${escapeHtml(m.title)}</strong>
+                  <span class="student-badge" style="background: var(--accent-teal-light); color: var(--accent-teal-text);">${m.matchPct}% Match</span>
+                </div>
+                <div style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.4;">${escapeHtml(m.whyFits || "")}</div>
+              </div>
+            `).join("") : "<p>No matches recorded.</p>"}
+          </div>
+
+          ${item.profileAnalysis ? `
+            <div class="drawer-section">
+              <div class="drawer-section-title">Generated Profile Insights</div>
+              <div class="kv-grid">
+                <span class="kv-key">Core Strengths:</span>
+                <span class="kv-val">${escapeHtml(item.profileAnalysis.strengths || "")}</span>
+
+                <span class="kv-key">Skills to Build:</span>
+                <span class="kv-val">${escapeHtml(item.profileAnalysis.skillsToBuild || "")}</span>
+
+                <span class="kv-key">Recommended Backup:</span>
+                <span class="kv-val">${escapeHtml(item.profileAnalysis.backupPath || "")}</span>
+              </div>
+            </div>
+          ` : ""}
+        `;
+      } else {
+        // Knowledge Quiz
+        contentHtml += `
+          <div class="drawer-section">
+            <div class="drawer-section-title">Quiz Performance Summary</div>
+            <div class="kv-grid">
+              <span class="kv-key">Final Score:</span>
+              <span class="kv-val"><strong>${item.score || 0} / 15 (${item.percentage || 0}%)</strong></span>
+
+              <span class="kv-key">Awarded Badge:</span>
+              <span class="kv-val"><strong>${escapeHtml(item.badge || "AI Explorer")}</strong></span>
+
+              <span class="kv-key">Time Elapsed:</span>
+              <span class="kv-val">${escapeHtml(item.timeFormatted || (item.timeSeconds ? item.timeSeconds + 's' : 'N/A'))}</span>
+
+              <span class="kv-key">Incorrect Answers:</span>
+              <span class="kv-val">${item.wrongAnswersCount || 0}</span>
+            </div>
+          </div>
+        `;
+
+        if (Array.isArray(item.answersSummary) && item.answersSummary.length > 0) {
+          contentHtml += `
+            <div class="drawer-section">
+              <div class="drawer-section-title">Question by Question Review</div>
+              <div style="display: flex; flex-direction: column; gap: 0.65rem;">
+                ${item.answersSummary.map((a, i) => `
+                  <div style="background: var(--bg-surface-alt); border-left: 4px solid ${a.correct ? 'var(--status-green-border)' : 'var(--status-red-border)'}; border-radius: var(--radius-sm); padding: 0.75rem 0.85rem; font-size: 0.82rem;">
+                    <div style="font-weight: 700; margin-bottom: 0.25rem;">
+                      ${i + 1}. ${escapeHtml(a.question)}
+                    </div>
+                    <div>Selected: <span style="color: ${a.correct ? 'var(--status-green-text)' : 'var(--status-red-text)'}; font-weight: 600;">${escapeHtml(a.yourAnswer)}</span></div>
+                    ${!a.correct && a.correctAnswer ? `<div style="color: var(--status-green-text); font-weight: 600; margin-top: 0.15rem;">Correct: ${escapeHtml(a.correctAnswer)}</div>` : ''}
+                  </div>
+                `).join("")}
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      body.innerHTML = contentHtml;
+      drawer.style.display = "flex";
+    }
+
+    function closeDrawer(e) {
+      if (!e || e.target.id === "detailDrawer" || e.type === "click") {
+        document.getElementById("detailDrawer").style.display = "none";
+      }
+    }
+
+    /* ============================================================
+       RECORD DELETION (LIVE FIRESTORE OR LOCAL)
+       ============================================================ */
+    async function deleteSubmission(subId) {
+      if (!confirm("Are you sure you want to permanently delete this student record?")) {
+        return;
+      }
+
+      try {
+        if (!isDemoMode && firebase.firestore && subId && !subId.startsWith("demo_")) {
+          await firebase.firestore().collection("results").doc(subId).delete();
+          showToast("Record deleted from cloud database.", "🗑️");
+        } else {
+          // Remove from local memory and offline storage
+          rawSubmissions = rawSubmissions.filter(x => x.id !== subId);
+          try {
+            const queue = getOfflineLocalData().filter(x => x.id !== subId);
+            localStorage.setItem("ai_explorer_offline_results", JSON.stringify(queue));
+          } catch (e) {}
+          applyFilters();
+          showToast("Record removed.", "🗑️");
+        }
+      } catch (err) {
+        console.error("Delete failed:", err);
+        showToast("Error deleting record: " + err.message, "⚠️");
+      }
+    }
+
+    /* ============================================================
+       CSV EXPORT UTILITY
+       Generates clean, properly escaped spreadsheet file
+       ============================================================ */
+    function exportCSV() {
+      if (filteredSubmissions.length === 0) {
+        showToast("No submissions to export.", "⚠️");
+        return;
+      }
+
+      const headers = [
+        "Timestamp",
+        "Type",
+        "Student ID",
+        "Student Name",
+        "School",
+        "District",
+        "Class",
+        "Stream",
+        "Math Comfort (1-5)",
+        "Coding Comfort (1-5)",
+        "Top Match 1",
+        "Match 1 Pct",
+        "Top Match 2",
+        "Match 2 Pct",
+        "Quiz Score",
+        "Quiz Pct",
+        "Quiz Time",
+        "Quiz Badge",
+        "10-Year Goal"
+      ];
+
+      const rows = filteredSubmissions.map(item => {
+        const timeMillis = parseTime(item);
+        const timeStr = timeMillis ? new Date(timeMillis).toISOString() : "";
+        const isCareer = item.type === "career_profile";
+        const top1 = (isCareer && Array.isArray(item.topMatches) && item.topMatches[0]) ? item.topMatches[0].title : "";
+        const pct1 = (isCareer && Array.isArray(item.topMatches) && item.topMatches[0]) ? item.topMatches[0].matchPct : "";
+        const top2 = (isCareer && Array.isArray(item.topMatches) && item.topMatches[1]) ? item.topMatches[1].title : "";
+        const pct2 = (isCareer && Array.isArray(item.topMatches) && item.topMatches[1]) ? item.topMatches[1].matchPct : "";
+
+        return [
+          timeStr,
+          item.type || "",
+          item.studentId || "",
+          item.studentName || "",
+          item.school || "",
+          item.district || "",
+          item.classGrade || "",
+          item.stream || "",
+          item.mathComfort !== undefined ? item.mathComfort : "",
+          item.codingComfort !== undefined ? item.codingComfort : "",
+          top1,
+          pct1,
+          top2,
+          pct2,
+          item.score !== undefined ? item.score : "",
+          item.percentage !== undefined ? item.percentage : "",
+          item.timeFormatted || (item.timeSeconds ? `${item.timeSeconds}s` : ""),
+          item.badge || "",
+          item.tenYearGoal || ""
+        ].map(val => {
+          const str = String(val).replace(/"/g, '""');
+          return `"${str}"`;
+        }).join(",");
+      });
+
+      const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\r\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const dateTag = new Date().toISOString().slice(0, 10);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `ai_explorer_workshop_submissions_${dateTag}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showToast("CSV exported successfully! 📥", "✅");
+    }
+  </script>
+</body>
+</html>

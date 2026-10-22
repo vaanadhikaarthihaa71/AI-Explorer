@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // AI Explorer Quiz & Career Profile Submissions
+    match /results/{resultId} {
+      // 1. Any student in the workshop can submit their results without account sign-in.
+      // Basic input validation:
+      // - Must specify a valid submission type ('career_profile' or 'knowledge_quiz')
+      // - Must contain valid studentId and studentName strings within reasonable lengths
+      allow create: if request.resource.data.type in ['career_profile', 'knowledge_quiz']
+                    && request.resource.data.studentId is string
+                    && request.resource.data.studentId.size() > 0
+                    && request.resource.data.studentId.size() <= 40
+                    && request.resource.data.studentName is string
+                    && request.resource.data.studentName.size() > 0
+                    && request.resource.data.studentName.size() <= 50;
+
+      // 2. Only authenticated workshop administrators (teachers/session hosts)
+      // can read student records, delete records, or modify data.
+      allow read, update, delete: if request.auth != null;
+    }
+
+    // Default deny for all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
